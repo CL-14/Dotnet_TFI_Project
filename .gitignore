@@ -1,0 +1,28 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio / IDE / Editor files
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+#Environemt Variables
+.env
+
+# Operating System specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Published applications
+[Pp]ublish/
+*.[Ll]og
+*.[Tt]mp

@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="TfiBus.Cli/TfiBus.Cli.csproj" />
+  <Project Path="TfiBus.Core/TfiBus.Core.csproj" />
+  <Project Path="TfiBus.Tests/TfiBus.Tests.csproj" />
+</Solution>
