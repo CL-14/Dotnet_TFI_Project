@@ -26,3 +26,6 @@ Thumbs.db
 [Pp]ublish/
 *.[Ll]og
 *.[Tt]mp
+
+#Static bus data
+GTFS_Realtime/

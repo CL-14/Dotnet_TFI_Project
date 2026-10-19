@@ -3,6 +3,11 @@
   <ItemGroup>
     <ProjectReference Include="..\TfiBus.Core\TfiBus.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+  <None Include="..\GTFS_Realtime\stops.txt" Link ="GTFS_Realtime\stops.txt">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+  </ItemGroup>
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
