@@ -1,0 +1,34 @@
+# Name shown in the Actions tab.
+name: CI
+
+# When to run: on every PR aimed at main, and on every push to main.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    # A fresh Ubuntu virtual machine, thrown away after the run.
+    runs-on: ubuntu-latest
+    steps:
+      # Downloads the repo's code onto the machine.
+      - uses: actions/checkout@v4
+
+      # Installs .NET. 10.0.x provides the SDK that understands .slnx;
+      # 8.0.x provides the runtime the net8.0 projects run on.
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      # downloads NuGet packages (including Grpc.Tools, which generates the feed classes).
+      - run: dotnet restore TfiBus.slnx
+
+      # compiles all three projects. Fails the run on any compile error.
+      - run: dotnet build TfiBus.slnx --no-restore --configuration Release
+
+      # runs every test in the solution against the build from the previous step.
+      - run: dotnet test TfiBus.slnx --no-build --configuration Release
