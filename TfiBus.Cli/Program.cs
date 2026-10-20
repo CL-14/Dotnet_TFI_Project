@@ -1,5 +1,6 @@
 ﻿using TfiBus.Core;
 using TransitRealtime;
+using Stop = TfiBus.Core.Stop;
 
 
 string path = Path.Combine(AppContext.BaseDirectory, "GTFS_Realtime", "stops.txt");
@@ -27,7 +28,7 @@ try
 
     FeedMessage feed = await client.GetVehicleFeedAsync();
 
-    Console.WriteLine($"Entities in feed: {feed.Entities.Count}");
+    Console.WriteLine($"Entities in feed: {feed.Entity.Count}"); //fixed the property name as it was using an old naming convention
 
 }
 catch (HttpRequestException ex)
