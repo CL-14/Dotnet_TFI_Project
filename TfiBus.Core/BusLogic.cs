@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Security.Cryptography.X509Certificates;
 using System.Xml.Serialization;
 using CsvHelper;
+using TransitRealtime;
 
 
 namespace TfiBus.Core;
@@ -40,7 +41,7 @@ public static class BusLogic
         // Same method as before, now returning Stop objects keyed by stop_code.
         public static Dictionary<string, Stop> BuildStopLookup(string filePath)
         {
-        // Key is stop_code, matching the Python version.
+        // This initializes an empty dictionary
         Dictionary<string, Stop> stops = new Dictionary<string, Stop>();
 
             try
@@ -83,7 +84,7 @@ public static class BusLogic
     // List<Stop> is a resizable list of Stop objects
     public static List<Stop> SearchStopsByName(string query, Dictionary<string, Stop> stopDict)
     {
-        List<Stop> results = new List<Stop>();
+        List<Stop> results = new List<Stop>(); // Initialize an empty list to hold the results
 
         // Guard clause: without this, an empty query would match EVERY stop,
         // because every string "contains" an empty string.
@@ -96,16 +97,68 @@ public static class BusLogic
         string cleanQuery = query.Trim();
 
 
-        foreach (Stop stop in stopDict.Values)
+        foreach (Stop stop in stopDict.Values) // Iterate over the values of the dictionary, which are Stop objects
         {
            // Check if the stop name contains the query string, ignoring case
             if (stop.StopName.Contains(cleanQuery, StringComparison.OrdinalIgnoreCase))
             {
-                results.Add(stop); // Python's append
+                results.Add(stop); // Equivalent to Python's to append
             }
         }
 
         return results;
+    }
+
+    //this brings in the FeedMessage and FeedEntity, the classes the package generates from the feed definition
+    public static List<NearbyVehicle> GetNearbyVehicles(
+        string stopCode,
+        double radiusKm,
+        Dictionary<string, Stop> stopDict,
+        FeedMessage feed)
+    {
+        //collects the vehicles that pass the distance check.
+        List<NearbyVehicle> nearby = new List<NearbyVehicle>();
+
+        //look up the stop by key, if found 'stop' holds it and the method can continue
+        //if nothing is found, we return the empty list. This function translation does not print anything to the terminal anymore like my python equivalent.
+        //whoever calls it, the CLI or web page, can manage how to show the user the results
+
+
+        //visits each entity in the feed. Lie the vehicle position, stop, trip updates, etc
+        if (!stopDict.TryGetValue(stopCode, out Stop? stop))
+        {
+            return nearby;
+        }
+        foreach (FeedEntity entity in feed.Entity)
+        {
+            //skip entities with no vehicles section or other possible null values
+            if (entity.Vehicle == null || entity.Vehicle.Position == null)
+            {
+                continue; // skip to the next entity
+            }
+
+            //the feed stores coordinates as float; c# is smart so it converts them to double automatically
+            double vehicleLat = entity.Vehicle.Position.Latitude;
+            double vehicleLon = entity.Vehicle.Position.Latitude;
+
+            //distance in km between the stop and this vehicle, using the haversine formula
+            double distanceKm = HaversineFormula(stop.Lat, stop.Lon,vehicleLat, vehicleLon);
+
+            if (distanceKm <= radiusKm)
+            {
+                NearbyVehicle found = new NearbyVehicle();
+
+                //entity.Vehicle is the position report, the inner .Vehicle is the descriptor that carries the vehicle's id. the ?s are stops the chain and gives null if the descriptor is missing
+
+                //then ?? "" substitutes an empty string so vehicleId is never nukll.
+
+                found.VehicleId = entity.Vehicle.Vehicle?.Id ?? "";
+                found.DistanceKm = distanceKm;
+                nearby.Add(found);
+            }
+
+        }
+        return nearby;
     }
 
 

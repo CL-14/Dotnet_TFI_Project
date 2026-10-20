@@ -8,11 +8,21 @@
 
   <ItemGroup>
     <PackageReference Include="CsvHelper" Version="33.1.0" />
+    <PackageReference Include="Google.Protobuf" Version="3.36.2" />
+    <PackageReference Include="Grpc.Tools" Version="2.84.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
   <ItemGroup>
   <None Update="GTFS_Realtime\stops.txt">
     <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
   </None>
+</ItemGroup>
+<ItemGroup>
+  <!-- Protobuf = tells Grpc.Tools to run protoc on this file during build.
+       GrpcServices="None" because the file defines data only, no gRPC services. -->
+  <Protobuf Include="Protos\gtfs-realtime.proto" GrpcServices="None" />
 </ItemGroup>
 
 </Project>
