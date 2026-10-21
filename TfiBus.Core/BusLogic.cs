@@ -1,9 +1,7 @@
-﻿using System.ComponentModel.Design.Serialization;
-using System.Globalization;
-using System.Security.Cryptography.X509Certificates;
-using System.Xml.Serialization;
+﻿using System.Globalization;
 using CsvHelper;
 using TransitRealtime;
+//removed unused imports
 
 
 namespace TfiBus.Core;
@@ -139,8 +137,7 @@ public static class BusLogic
 
             //the feed stores coordinates as float; c# is smart so it converts them to double automatically
             double vehicleLat = entity.Vehicle.Position.Latitude;
-            double vehicleLon = entity.Vehicle.Position.Latitude;
-
+            double vehicleLon = entity.Vehicle.Position.Longitude; //fixed double latitude conversion showing instead of longitude
             //distance in km between the stop and this vehicle, using the haversine formula
             double distanceKm = HaversineFormula(stop.Lat, stop.Lon,vehicleLat, vehicleLon);
 
