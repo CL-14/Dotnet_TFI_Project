@@ -16,12 +16,10 @@ jobs:
       # Downloads the repo's code onto the machine.
       - uses: actions/checkout@v4
 
-      # Installs .NET. 10.0.x provides the SDK that understands .slnx;
-      # 8.0.x provides the runtime the net8.0 projects run on.
+      # Installs .NET. 10.0.x provides the SDK that understands .slnx; also removed dotnet 8 from it for the retarget
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            8.0.x
             10.0.x
 
       # downloads NuGet packages (including Grpc.Tools, which generates the feed classes).
