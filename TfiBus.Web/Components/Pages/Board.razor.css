@@ -1,0 +1,109 @@
+﻿.search {
+    max-width: 760px;
+    margin: 1rem auto 0;
+}
+
+    .search label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .search input {
+        width: 100%;
+        padding: 0.6rem 0.8rem;
+        font-size: 1.1rem;
+        border: 2px solid #1c232b;
+        border-radius: 8px;
+    }
+
+.results {
+    list-style: none;
+    margin: 0.25rem 0 0;
+    padding: 0;
+    border: 2px solid #1c232b;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+    .results button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 0.6rem 0.8rem;
+        border: 0;
+        border-bottom: 1px solid #ddd;
+        background: #fff;
+        font-size: 1rem;
+        cursor: pointer;
+    }
+
+        .results button:hover,
+        .results button:focus-visible {
+            background: #fff3d6;
+        }
+
+.code,
+.no-results {
+    color: #666;
+}
+
+.stop-title {
+    max-width: 760px;
+    margin: 1rem auto 0;
+    font-size: 1.4rem;
+}
+
+.sign {
+    background: #05070a;
+    border: 6px solid #1c232b;
+    border-radius: 14px;
+    padding: 1.2rem 1.5rem;
+    max-width: 760px;
+    margin: 1rem auto;
+    font-family: "Courier New", Consolas, monospace;
+    font-weight: bold;
+    font-size: 1.8rem;
+    letter-spacing: 0.05em;
+    color: #ffb000;
+    text-shadow: 0 0 6px rgba(255, 176, 0, 0.6);
+}
+
+.arrivals {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+    .arrivals td {
+        padding: 0.25rem 0.5rem;
+    }
+
+.route {
+    width: 4.5rem;
+}
+
+.due {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.message {
+    margin: 1rem 0 0;
+    padding-top: 0.75rem;
+    border-top: 2px dashed #6b4a00;
+    font-size: 1.3rem;
+}
+
+.info,
+.hint {
+    max-width: 760px;
+    margin: 0.5rem auto 0;
+    color: #555;
+}

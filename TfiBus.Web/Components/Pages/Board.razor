@@ -1,0 +1,93 @@
+﻿@page "/board"
+@using TfiBus.Core
+@inject IWebHostEnvironment Env
+
+<PageTitle>Bus Stop Search</PageTitle>
+
+<h1 class="visually-hidden">Bus stop search</h1>
+
+<div class="search">
+    <label for="stop-search">Search for a stop</label>
+    <input id="stop-search" type="text" placeholder="e.g. Harrington"
+           @bind="searchText" @bind:event="oninput" @bind:after="DoSearch" />
+
+    @if (results.Count > 0)
+    {
+        <ul class="results">
+            @foreach (var s in results)
+            {
+                <li>
+                    <button type="button" @onclick="() => SelectStop(s)">
+                        @s.StopName <span class="code">(@s.StopCode)</span>
+                    </button>
+                </li>
+            }
+        </ul>
+    }
+    else if (searchText.Trim().Length >= 2)
+    {
+        <p class="no-results">No stops found.</p>
+    }
+</div>
+
+@if (loadError != null)
+{
+    <p class="no-results">@loadError</p>
+}
+
+@if (stopSelected)
+{
+    <h2 class="stop-title">@stopName <span class="code">(@stopCode)</span></h2>
+    <p class="info">Arrival information will appear below.</p>
+}
+else
+{
+    <p class="hint">Search for a stop to get started.</p>
+}
+
+@code {
+    private bool stopSelected = false;
+    private string stopName = "";
+    private string stopCode = "";
+
+    private string searchText = "";
+    private List<Stop> results = new();
+
+    // static = loaded once and shared, instead of re-reading the file on every page visit
+    private static Dictionary<string, Stop>? allStops;
+    private string? loadError;
+
+    protected override void OnInitialized()
+    {
+        if (allStops != null) return;
+
+        string path = Path.Combine(Env.ContentRootPath, "GTFS_Realtime", "stops.txt");
+        if (!File.Exists(path))
+        {
+            loadError = "stops.txt not found.";
+            return;
+        }
+
+        allStops = BusLogic.BuildStopLookup(path);
+    }
+
+    private void DoSearch()
+    {
+        if (allStops == null || searchText.Trim().Length < 2)
+        {
+            results = new();
+            return;
+        }
+
+        results = BusLogic.SearchStopsByName(searchText, allStops).Take(10).ToList();
+    }
+
+    private void SelectStop(Stop stop)
+    {
+        stopName = stop.StopName;
+        stopCode = stop.StopCode;
+        stopSelected = true;
+        searchText = "";
+        results.Clear();
+    }
+}

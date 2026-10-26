@@ -2,4 +2,5 @@
   <Project Path="TfiBus.Cli/TfiBus.Cli.csproj" />
   <Project Path="TfiBus.Core/TfiBus.Core.csproj" />
   <Project Path="TfiBus.Tests/TfiBus.Tests.csproj" />
+  <Project Path="TfiBus.Web/TfiBus.Web.csproj" Id="9a92aeb5-77b9-44a6-983b-71dcdc4cc3da" />
 </Solution>
