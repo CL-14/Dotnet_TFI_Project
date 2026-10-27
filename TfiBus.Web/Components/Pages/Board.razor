@@ -53,15 +53,15 @@ else
     private string searchText = "";
     private List<Stop> results = new();
 
-    // static = loaded once and shared, instead of re-reading the file on every page visit
-    private static Dictionary<string, Stop>? allStops;
+    
+    private static Dictionary<string, Stop>? allStops; // static to load once and share, instead of reading again the file on every page visit
     private string? loadError;
 
     protected override void OnInitialized()
     {
         if (allStops != null) return;
 
-        string path = Path.Combine(Env.ContentRootPath, "GTFS_Realtime", "stops.txt");
+        string path = Path.Combine(Env.ContentRootPath, "GTFS_Realtime", "stops.txt"); // C:\Users\luara\source\repos\Dotnet_TFI_Project\TfiBus.Web\GTFS_Realtime (not committed)
         if (!File.Exists(path))
         {
             loadError = "stops.txt not found.";
