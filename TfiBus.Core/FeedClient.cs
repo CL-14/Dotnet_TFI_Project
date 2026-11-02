@@ -5,7 +5,7 @@ namespace TfiBus.Core;
 public class FeedClient
 {
     //we set it const so the value is fixed at compiled time
-    private const string VehicleUrl = "https://api.nationaltransport.ie/gtfsr/v2/vehicles";
+    private const string BaseUrl = "https://api.nationaltransport.ie/gtfsr/v2/";
 
     //i create fields only visible inside this class
     //assigned once in the constructor, then never changed
@@ -32,10 +32,15 @@ public class FeedClient
     //Task<FeedMessage> = a FeedMessage that arrives when the awaits finish
     //throws if the request fails or the response can't be parsed
 
-    public async Task<FeedMessage> GetVehicleFeedAsync()
+
+    public Task<FeedMessage> GetVehicleFeedAsync() { return FetchFeedAsync("vehicles"); }
+    public Task<FeedMessage> GetTripUpdatesFeedAsync() { return FetchFeedAsync("TripUpdates"); }
+    public Task<FeedMessage> GetAlertsFeedAsync() { return FetchFeedAsync("alerts"); }
+
+    private async Task<FeedMessage> FetchFeedAsync(string feedName)
     {
         //build get request
-        using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, VehicleUrl);
+        using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, BaseUrl + feedName);
         request.Headers.Add("x-api-key", _apikey);
 
         //send the request and pauses here until the response headers arrive
@@ -53,7 +58,6 @@ public class FeedClient
         // Parser is generated with the class; ParseFrom reads the protobuf bytes from the stream
         // and builds a FeedMessage. Throws InvalidProtocolBufferException if the data is invalid
         FeedMessage feed = FeedMessage.Parser.ParseFrom(body);
-        
         return feed;
 
     }
