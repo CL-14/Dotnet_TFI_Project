@@ -8,21 +8,21 @@ namespace TfiBus.Core;
 
 public static class BusLogic
 {
-    public static double HaversineFormula(double Lat1Rad, double Lon1Rad, double Lat2Rad, double Lon2Rad)
+    public static double HaversineFormula(double lat1, double lon1, double lat2, double lon2)
     {
 
-        Lat1Rad = Lat1Rad * (Math.PI / 180);
-        Lon1Rad = Lon1Rad * (Math.PI / 180);
-        Lat2Rad = Lat2Rad * (Math.PI / 180);
-        Lon2Rad = Lon2Rad * (Math.PI / 180);
+        double lat1Rad = lat1 * (Math.PI / 180);
+        double lon1Rad = lon1 * (Math.PI / 180);
+        double lat2Rad = lat2 * (Math.PI / 180);
+        double lon2Rad = lon2 * (Math.PI / 180);
 
         //calculate the difference, that is, subtracting the two latitudes and longitudes from each other.
 
-        double dlon = Lon2Rad - Lon1Rad;
-        double dlat = Lat2Rad - Lat1Rad;
+        double dlon = lon2Rad - lon1Rad;
+        double dlat = lat2Rad - lat1Rad;
 
         //calculate the harvesine formula
-        double HFormula = Math.Pow(Math.Sin(dlat / 2), 2) + Math.Cos(Lat1Rad) * Math.Cos(Lat2Rad) * Math.Pow(Math.Sin(dlon / 2), 2);
+        double HFormula = Math.Pow(Math.Sin(dlat / 2), 2) + Math.Cos(lat1Rad) * Math.Cos(lat2Rad) * Math.Pow(Math.Sin(dlon / 2), 2);
 
         //calculate the great circle distance in radians
         double GCircleDistance = 2 * Math.Atan2(Math.Sqrt(HFormula), Math.Sqrt(1 - HFormula));
@@ -42,8 +42,8 @@ public static class BusLogic
         // This initializes an empty dictionary
         Dictionary<string, Stop> stops = new Dictionary<string, Stop>();
 
-            try
-            {
+            //removed try catch and writeline
+
                 //this is a declaration to cleanup after the file had been read, similar to fclose in python. Basically closes when the block ends.
                 using StreamReader reader = new StreamReader(filePath);
                     using CsvReader csv = new CsvReader(reader, CultureInfo.InvariantCulture);
@@ -69,11 +69,7 @@ public static class BusLogic
                         if (stop.StopCode == "") { continue; } // skip rows with no code
                         stops[stop.StopCode] = stop; // store the Stop object keyed by stop_code
                 }
-            }
-            catch (IOException)
-            {
-                Console.WriteLine("The file 'stops.txt' was not found.");
-            }
+
 
             return stops;
         }
