@@ -20,9 +20,9 @@ public class CollectorDatabaseTests : IDisposable
     {
         SqliteConnection.ClearAllPools();
         //WAL mode creates "-wal" and "-shm" side files, this is to remove all three
-        foreach (string suffix in new [] {"", "-wall", "-shm"})
+        foreach (string suffix in new[] { "", "-wall", "-shm" })
         {
-            if (File.Exists(_dbPath + suffix)) {File.Delete(_dbPath + suffix); }
+            if (File.Exists(_dbPath + suffix)) { File.Delete(_dbPath + suffix); }
 
         }
 
@@ -57,11 +57,11 @@ public class CollectorDatabaseTests : IDisposable
         //a new bd with the tables created
         CollectorDatabase db = new CollectorDatabase(_dbPath);
         db.CreateTables();
-        List<ObservedTrip> trips = new List<ObservedTrip> {MakeTrip("T1")};
+        List<ObservedTrip> trips = new List<ObservedTrip> { MakeTrip("T1") };
 
         //record the same trip in two polls, 120 seconds apart
         db.RecordObservedTrips(trips, 1000);
-        db.RecordObservedTrips(trips,1120);
+        db.RecordObservedTrips(trips, 1120);
 
         //stil one row, counted twice, with first and last times keptapart
         Assert.Equal(1, ScalarQuery("SELECT COUNT(*) FROM trip_observed"));
@@ -77,11 +77,25 @@ public class CollectorDatabaseTests : IDisposable
     {
         CollectorDatabase db = new CollectorDatabase(_dbPath);
         db.CreateTables();
-        db.CreateTables();  
+        db.CreateTables();
 
         db.RecordObservedTrips(new List<ObservedTrip> { MakeTrip("T1"), MakeTrip("T2") }, 1000);
 
         Assert.Equal(2, ScalarQuery("SELECT COUNT(*) FROM trip_observed"));
+    }
+
+    [Fact]
+    public void CreateTables_CreatesAllFiveTables()
+    {
+        CollectorDatabase db = new CollectorDatabase(_dbPath);
+        db.CreateTables();
+
+        // sqlite_master lists every table, counting the five names confirms they all exist.
+        long count = ScalarQuery(@"SELECT COUNT(*) FROM sqlite_master
+            WHERE type = 'table' AND name IN
+            ('trip_observed', 'trip_predicted', 'poll_log', 'vehicle_latest', 'alert_current')");
+
+        Assert.Equal(5, count);
     }
 
 }
