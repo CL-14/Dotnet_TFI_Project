@@ -1,3 +1,5 @@
+// These tests build alerts with the deprecated active_period field on purpose, to test the fallback.
+#pragma warning disable CS0612
 using TfiBus.Core;
 using TransitRealtime;
 
@@ -101,5 +103,43 @@ public class FeedMapperTests
         Assert.Equal(100, result[0].ActiveFrom);
         Assert.Equal(200, result[0].ActiveTo);
         Assert.Equal("Warning", result[0].Severity);
+    }
+    // Ensures that the newer ImpactPeriod takes precedence
+    // over the older legacy ActivePeriod when both are present.
+    [Fact]
+    public void MapAlerts_PrefersImpactPeriod_OverLegacyActivePeriod()
+    {
+        FeedMessage feed = new FeedMessage();
+        FeedEntity entity = new FeedEntity { Id = "A1" };
+        Alert alert = new Alert();
+        alert.InformedEntity.Add(new EntitySelector { RouteId = "R1" });
+        alert.ActivePeriod.Add(new TimeRange { Start = 100, End = 200 });   // legacy
+        alert.ImpactPeriod.Add(new TimeRange { Start = 300, End = 400 });   // newer
+        entity.Alert = alert;
+        feed.Entity.Add(entity);
+
+        List<AlertRecord> result = FeedMapper.MapAlerts(feed);
+
+        Assert.Equal(300, result[0].ActiveFrom);
+        Assert.Equal(400, result[0].ActiveTo);
+    }
+
+    // Ensures backward compatibility by falling back to the
+    // legacy ActivePeriod when the ImpactPeriod is not specified
+    [Fact]
+    public void MapAlerts_FallsBackToLegacyActivePeriod_WhenNoImpactPeriod()
+    {
+        FeedMessage feed = new FeedMessage();
+        FeedEntity entity = new FeedEntity { Id = "A1" };
+        Alert alert = new Alert();
+        alert.InformedEntity.Add(new EntitySelector { RouteId = "R1" });
+        alert.ActivePeriod.Add(new TimeRange { Start = 100, End = 200 });
+        entity.Alert = alert;
+        feed.Entity.Add(entity);
+
+        List<AlertRecord> result = FeedMapper.MapAlerts(feed);
+
+        Assert.Equal(100, result[0].ActiveFrom);
+        Assert.Equal(200, result[0].ActiveTo);
     }
 }

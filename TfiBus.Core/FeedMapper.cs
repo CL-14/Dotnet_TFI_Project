@@ -108,14 +108,13 @@ public static class FeedMapper
             record.StopIds = string.Join(",", stopIds);
             record.Severity = alert.SeverityLevel.ToString();
 
-            // An alert can have several active periods; the first is stored.
-            if (alert.ActivePeriod.Count > 0)
+            // An alert can have several active periods; the first is stored. reverse, this is debug
+            TimeRange? period = FirstPeriod(alert);
+            if (period != null)
             {
-                TimeRange period = alert.ActivePeriod[0];
                 record.ActiveFrom = (long)period.Start;
                 record.ActiveTo = (long)period.End;
             }
-
             result.Add(record);
         }
 
@@ -137,6 +136,23 @@ public static class FeedMapper
         //prefer the arrival delay, fall back to the departure delay if there is no arrival
         if (first.Arrival != null) {return first.Arrival.Delay;}
         if (first.Departure != null){return first.Departure.Delay;}
+
+        return null;
+    }
+    // Picks the alert's time period: the newer impact_period (when service is affected)
+    // if present, otherwise the older active_period that many feeds still fill.
+    private static TimeRange? FirstPeriod(Alert alert)
+    {
+        if (alert.ImpactPeriod.Count > 0)
+        {
+            return alert.ImpactPeriod[0];
+        }
+
+        // The spec marks active_period as deprecated, so the compiler warns on any use.
+        // We still need it as a fallback, so the warning is switched off for this line only.
+#pragma warning disable CS0612
+        if (alert.ActivePeriod.Count > 0) { return alert.ActivePeriod[0]; }
+#pragma warning restore CS0612
 
         return null;
     }
