@@ -149,5 +149,160 @@ public class CollectorDatabase
     transaction.Commit(); //make the writes permanent.
   }
 
+  //writer section
+
+
+  //Converts C# null into the databse's own "no value" marker (DBNull).
+  //Parameters cannot be given plain null, so every optional value goes through this
+
+  private static object DbValue(object? value)
+  {
+    return value ?? DBNull.Value;
+  }
+
+  //returns one poll of the trip-updates feed. A new trip gets a row; a known trip gets
+  //last_seen, seen_count, its latest delay and its highest delay so far updated
+  public void RecordPredictedTrips(List<PredictedTrip>trips, long polledAtUnix)
+  {
+    using SqliteConnection connection = new SqliteConnection(_connectionString);
+    connection.Open();
+    using SqliteTransaction transaction = connection.BeginTransaction();
+    using SqliteCommand command = connection.CreateCommand();
+
+    //COALESCE(a, b) means "a, or b if a has no value". It keeps the last known delay
+    //when a poll has none, and lets MAX work when either delay is missing
+    command.CommandText = @"
+            INSERT INTO trip_predicted
+              (start_date, trip_id, route_id, start_time, first_seen, last_seen, seen_count,
+               last_delay_s, max_delay_s, schedule_relationship)
+            VALUES
+              ($startDate, $tripId, $routeId, $startTime, $polledAt, $polledAt, 1,
+               $delay, $delay, $relationship)
+            ON CONFLICT (start_date, trip_id) DO UPDATE SET
+              last_seen = excluded.last_seen,
+              seen_count = seen_count + 1,
+              last_delay_s = COALESCE(excluded.last_delay_s, last_delay_s),
+              max_delay_s = MAX(COALESCE(max_delay_s, excluded.last_delay_s),
+                                COALESCE(excluded.last_delay_s, max_delay_s)),
+              schedule_relationship = excluded.schedule_relationship;";
+
+    foreach (PredictedTrip trip in trips)
+    {
+      command.Parameters.Clear(); //this removes the previous trip's values
+      command.Parameters.AddWithValue("$startDate", trip.StartDate);
+      command.Parameters.AddWithValue("$tripId", trip.TripId);
+      command.Parameters.AddWithValue("$routeId", trip.RouteId);
+      command.Parameters.AddWithValue("$startTime", trip.StartTime);
+      command.Parameters.AddWithValue("$polledAt", polledAtUnix);
+      command.Parameters.AddWithValue("$delay", DbValue(trip.DelaySeconds));
+      command.Parameters.AddWithValue("$relationship", trip.ScheduleRelationship);
+      command.ExecuteNonQuery();
+    }
+
+    transaction.Commit();
+
+  }
+
+  //replaces the whole vehicle_latest table with the vehicles from this poll
+  //delete and insert happen in one transaction, so  reader never sees a half-empty table
+  //and vehicles that left the feed disappear
+
+  public void ReplaceLatestVehicles(List<VehicleSnapshot> vehicles, long polledAtUnix)
+  {
+    using SqliteConnection connection = new SqliteConnection(_connectionString);
+    connection.Open();
+    using SqliteTransaction transaction = connection.BeginTransaction();
+    using SqliteCommand command = connection.CreateCommand();
+    command.Transaction = transaction;
+
+    command.CommandText = "DELETE FROM vehicle_latest";
+    command.ExecuteNonQuery();
+
+    //INSERT OR REPLACE overwrites a row with the same vehicle_id instead of failing,
+    //in case the feed lists a vehicle twice.
+    command.CommandText = @"
+            INSERT OR REPLACE INTO vehicle_latest
+              (vehicle_id, trip_id, route_id, start_date, start_time,
+               latitude, longitude, bearing, position_time, polled_at)
+            VALUES
+              ($vehicleId, $tripId, $routeId, $startDate, $startTime,
+               $lat, $lon, $bearing, $positionTime, $polledAt);";
+
+    foreach (VehicleSnapshot vehicle in vehicles)
+    {
+      command.Parameters.Clear();
+      command.Parameters.AddWithValue("$vehicleId", vehicle.VehicleId);
+      command.Parameters.AddWithValue("$tripId", vehicle.TripId);
+      command.Parameters.AddWithValue("$routeId", vehicle.RouteId);
+      command.Parameters.AddWithValue("$startDate", vehicle.StartDate);
+      command.Parameters.AddWithValue("$startTime", vehicle.StartTime);
+      command.Parameters.AddWithValue("$lat", vehicle.Latitude);
+      command.Parameters.AddWithValue("$lon", vehicle.Longitude);
+      command.Parameters.AddWithValue("$bearing", vehicle.Bearing);
+      command.Parameters.AddWithValue("$positionTime", vehicle.PositionTime);
+      command.Parameters.AddWithValue("$polledAt", polledAtUnix);
+      command.ExecuteNonQuery();
+    }
+
+    transaction.Commit();
+
+  }
+
+  // Replaces the whole alert_current table with the alerts from this poll, same idea as above
+  public void ReplaceCurrentAlerts(List<AlertRecord> alerts, long polledAtUnix)
+  {
+    using SqliteConnection connection = new SqliteConnection(_connectionString);
+    connection.Open();
+    using SqliteTransaction transaction = connection.BeginTransaction();
+    using SqliteCommand command = connection.CreateCommand();
+    command.Transaction = transaction;
+
+    command.CommandText = "DELETE FROM alert_current";
+    command.ExecuteNonQuery();
+
+    command.CommandText = @"
+            INSERT OR REPLACE INTO alert_current
+              (alert_id, header, description, route_ids, stop_ids,
+               active_from, active_to, severity, polled_at)
+            VALUES
+              ($alertId, $header, $description, $routeIds, $stopIds,
+               $from, $to, $severity, $polledAt);";
+
+    foreach (AlertRecord alert in alerts)
+    {
+      command.Parameters.Clear();
+      command.Parameters.AddWithValue("$alertId", alert.AlertId);
+      command.Parameters.AddWithValue("$header", alert.Header);
+      command.Parameters.AddWithValue("$description", alert.Description);
+      command.Parameters.AddWithValue("$routeIds", alert.RouteIds);
+      command.Parameters.AddWithValue("$stopIds", alert.StopIds);
+      command.Parameters.AddWithValue("$from", DbValue(alert.ActiveFrom));   // may be null
+      command.Parameters.AddWithValue("$to", DbValue(alert.ActiveTo));
+      command.Parameters.AddWithValue("$severity", alert.Severity);
+      command.Parameters.AddWithValue("$polledAt", polledAtUnix);
+      command.ExecuteNonQuery();
+    }
+
+    transaction.Commit();
+  }
+
+  // Adds one row to poll_log: which feed was polled, whether it worked, and why not if it failed.
+  public void LogPoll(string feed, bool ok, int? httpStatus, int entities, string? error, long polledAtUnix)
+  {
+    using SqliteConnection connection = new SqliteConnection(_connectionString);
+    connection.Open();
+    using SqliteCommand command = connection.CreateCommand();
+
+    command.CommandText = @"
+            INSERT INTO poll_log (polled_at, feed, ok, http_status, entities, error)
+            VALUES ($polledAt, $feed, $ok, $status, $entities, $error);";
+    command.Parameters.AddWithValue("$polledAt", polledAtUnix);
+    command.Parameters.AddWithValue("$feed", feed);
+    command.Parameters.AddWithValue("$ok", ok ? 1 : 0);   // SQLite has no true/false type; 1 and 0 are used
+    command.Parameters.AddWithValue("$status", DbValue(httpStatus));
+    command.Parameters.AddWithValue("$entities", entities);
+    command.Parameters.AddWithValue("$error", DbValue(error));
+    command.ExecuteNonQuery();
+  }
 
 }
