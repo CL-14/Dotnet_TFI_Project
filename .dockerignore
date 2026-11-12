@@ -1,0 +1,9 @@
+**/bin/
+**/obj/
+.git/
+.env
+*.db
+*.db-wal
+*.db-shm
+GTFS_Realtime/
+reports/
