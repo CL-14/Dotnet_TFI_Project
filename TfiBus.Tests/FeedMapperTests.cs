@@ -142,4 +142,22 @@ public class FeedMapperTests
         Assert.Equal(100, result[0].ActiveFrom);
         Assert.Equal(200, result[0].ActiveTo);
     }
+    
+    // Ensures that when neither ImpactPeriod nor ActivePeriod is specified, the ActiveFrom and ActiveTo fields are null
+    [Fact]
+    public void ToObservedTrips_SkipsVehiclesWithoutATrip_AndRepeatedTrips()
+    {
+        List<VehicleSnapshot> snapshots = new List<VehicleSnapshot>
+        {
+            new VehicleSnapshot { VehicleId = "V1", TripId = "T1", StartDate = "20261112", RouteId = "R1" },
+            new VehicleSnapshot { VehicleId = "V2", TripId = "T1", StartDate = "20261112", RouteId = "R1" },  // same trip again
+            new VehicleSnapshot { VehicleId = "V3", TripId = "", StartDate = "" }                             // not on a trip
+        };
+
+        List<ObservedTrip> trips = FeedMapper.ToObservedTrips(snapshots);
+
+        Assert.Single(trips);
+        Assert.Equal("T1", trips[0].TripId);
+        Assert.Equal("V1", trips[0].VehicleId);
+    }
 }
