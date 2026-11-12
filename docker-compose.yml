@@ -1,0 +1,16 @@
+services:
+  collector:
+    build: .
+    # Restart after a crash and after the server reboots, unless you stopped.
+    restart: unless-stopped
+    # Passes the variables in .env (TFI_API_KEY) into the container.
+    env_file: .env
+    volumes:
+      # The database folder on the server, mapped into the container, so the data survives
+      # restarts and rebuilds and can be backed up
+      - ./data:/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m" # without this Docker logs grow forever
+        max-file: "3"
