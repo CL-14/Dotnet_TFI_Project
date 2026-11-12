@@ -7,3 +7,5 @@
 *.db-shm
 GTFS_Realtime/
 reports/
+data/
+backups/
