@@ -4,6 +4,7 @@ namespace TfiBus.Tests;
 
 public class PollScheduleTests
 {
+    //PollSchedule.FeedFor is a static method, so i don't need to create an instance of PollSchedule to test it
     [Fact]
     public void FeedFor_AlternatesVehiclesAndTripUpdates()
     {
@@ -12,6 +13,7 @@ public class PollScheduleTests
         Assert.Equal(FeedKind.Vehicles, PollSchedule.FeedFor(2));
     }
 
+    //PollSchedule.FeedFor returns Alerts for poll numbers 29 and 59, and Vehicles or TripUpdates for all other poll numbers
     [Fact]
     public void FeedFor_Over60Polls_UsesEachFeedTheExpectedNumberOfTimes()
     {
