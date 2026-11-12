@@ -34,3 +34,7 @@ GTFS_Realtime/
 *.db
 *.db-wal
 *.db-shm
+
+#server files
+data/
+backups/
