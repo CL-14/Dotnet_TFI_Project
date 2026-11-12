@@ -166,4 +166,37 @@ public static class FeedMapper
         }
         return text.Translation[0].Text;
     }
+
+    // Turns this poll's vehicle positions into one ObservedTrip per trip.
+    // Vehicles without a trip (not in service) are skipped, and so are repeats of a trip
+    // already listed, so a trip is counted once per poll.
+    public static List<ObservedTrip> ToObservedTrips(List<VehicleSnapshot> snapshots)
+    {
+        List<ObservedTrip> result = new List<ObservedTrip>();
+        HashSet<string> seen = new HashSet<string>();   // remembers which trips were already added
+
+        foreach (VehicleSnapshot snapshot in snapshots)
+        {
+            if (snapshot.TripId == "" || snapshot.StartDate == "")
+            {
+                continue;
+            }
+
+            // Add returns false when the value was already in the set, so repeats are skipped.
+            if (!seen.Add(snapshot.StartDate + "|" + snapshot.TripId))
+            {
+                continue;
+            }
+
+            ObservedTrip trip = new ObservedTrip();
+            trip.StartDate = snapshot.StartDate;
+            trip.TripId = snapshot.TripId;
+            trip.RouteId = snapshot.RouteId;
+            trip.StartTime = snapshot.StartTime;
+            trip.VehicleId = snapshot.VehicleId;
+            result.Add(trip);
+        }
+
+        return result;
+    }
 }

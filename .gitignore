@@ -29,3 +29,8 @@ Thumbs.db
 
 #Static bus data
 GTFS_Realtime/
+
+#database files
+*.db
+*.db-wal
+*.db-shm
