@@ -11,7 +11,12 @@ builder.Services.AddSingleton<FeedClient>(services =>
 
     // The collector runs for months, so connections are renewed every 5 minutes
     // instead of living forever (this picks up DNS changes).
-    SocketsHttpHandler handler = new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) };
+    SocketsHttpHandler handler = new SocketsHttpHandler
+    { PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+
+    // Drops idle connections after 30 s, so a poll (about every 61 s) never reuses a connection that is closing.
+    PooledConnectionIdleTimeout = TimeSpan.FromSeconds(30)
+    };
 
     // The trip-updates feed is about 5 MB, so allow 30 seconds before giving up.
     HttpClient http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };

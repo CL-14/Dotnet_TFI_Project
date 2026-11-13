@@ -91,7 +91,9 @@ public class Worker : BackgroundService
                 return 900;
             }
 
-            _logger.LogWarning(ex, "Request for {Feed} failed (status {Status}).", feed, status);
+            // Logs only the innermost error message (for example "Connection reset by peer") instead of the whole stack trace, an error can generate a lot of lines and the stack trace is not useful for a network error.
+            _logger.LogWarning("Request for {Feed} failed (status {Status}): {Message}", feed, status, ex.GetBaseException().Message);
+            
             return 0;
         }
         catch (TaskCanceledException)
