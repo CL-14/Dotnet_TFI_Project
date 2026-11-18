@@ -13,14 +13,38 @@ public class Worker : BackgroundService
     private readonly FeedClient _feedClient;
     private readonly CollectorDatabase _database;
 
+    private readonly HealthcheckPinger _healthcheck;
+    // The last time a ping was accepted. MinValue means "never", so the first success pings at once.
+    private DateTimeOffset _lastPing = DateTimeOffset.MinValue;
+
+    // Pings the outside monitor after a successful poll, at most once every 4 minutes.
+    private async Task PingHealthcheckAsync()
+    {
+        if (DateTimeOffset.UtcNow - _lastPing < TimeSpan.FromMinutes(4))
+        {
+            return;   // pinged recently; no need to ping on every poll
+        }
+
+        bool sent = await _healthcheck.PingAsync();
+        if (sent)
+        {
+            _lastPing = DateTimeOffset.UtcNow;
+        }
+        else if (_healthcheck.IsConfigured)
+        {
+            _logger.LogWarning("Healthcheck ping failed; will retry after the next successful poll.");
+        }
+    }
+
     // The host supplies all four (dependency injection).
     public Worker(ILogger<Worker> logger, IConfiguration configuration,
-                  FeedClient feedClient, CollectorDatabase database)
+                  FeedClient feedClient, CollectorDatabase database, HealthcheckPinger healthcheck)
     {
         _logger = logger;
         _configuration = configuration;
         _feedClient = feedClient;
         _database = database;
+        _healthcheck = healthcheck;
     }
 
 
@@ -72,6 +96,7 @@ public class Worker : BackgroundService
             int records = await FetchAndStoreAsync(feed, polledAt);
             SafeLogPoll(feed, true, 200, records, null, polledAt);
             _logger.LogInformation("Stored {Feed}: {Count} records.", feed, records);
+            await PingHealthcheckAsync();
             return 0;
         }
         catch (HttpRequestException ex)
@@ -93,7 +118,7 @@ public class Worker : BackgroundService
 
             // Logs only the innermost error message (for example "Connection reset by peer") instead of the whole stack trace, an error can generate a lot of lines and the stack trace is not useful for a network error.
             _logger.LogWarning("Request for {Feed} failed (status {Status}): {Message}", feed, status, ex.GetBaseException().Message);
-            
+
             return 0;
         }
         catch (TaskCanceledException)

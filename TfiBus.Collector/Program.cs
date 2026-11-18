@@ -31,6 +31,15 @@ builder.Services.AddSingleton<CollectorDatabase>(services =>
     return new CollectorDatabase(path);
 });
 
+
+builder.Services.AddSingleton<HealthcheckPinger>(services =>
+{
+    // Null when HEALTHCHECK_URL is not set; the pinger then does nothing.
+    string? url = builder.Configuration["HEALTHCHECK_URL"];
+    HttpClient http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+    return new HealthcheckPinger(http, url);
+});
+
 builder.Services.AddHostedService<Worker>();
 
 IHost host = builder.Build();
