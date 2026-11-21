@@ -3,4 +3,5 @@
   <Project Path="TfiBus.Collector/TfiBus.Collector.csproj" />
   <Project Path="TfiBus.Core/TfiBus.Core.csproj" />
   <Project Path="TfiBus.Tests/TfiBus.Tests.csproj" />
+  <Project Path="TfiBus.Web/TfiBus.Web.csproj" />
 </Solution>

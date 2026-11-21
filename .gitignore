@@ -38,3 +38,12 @@ GTFS_Realtime/
 #server files
 data/
 backups/
+
+# ASP.NET Core / Razor Pages extras
+appsettings.Development.json
+wwwroot/lib/
+TestResults/
+*.nupkg
+*.bak
+*.cache
+*.DotSettings.user
