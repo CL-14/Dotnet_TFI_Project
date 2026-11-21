@@ -1,0 +1,20 @@
+﻿@page "/"
+@inject CollectorReader Reader
+
+<PageTitle>Where Is That Ghost Bus?</PageTitle>
+
+<h1>Where Is That Ghost Bus?</h1>
+<p>Vehicles currently tracked: @vehicleCount</p>
+<p>Last successful poll: @(minutes?.ToString() ?? "never") minutes ago</p>
+
+@code {
+    private long vehicleCount;
+    private long? minutes;
+
+    // Runs once when the page is created: reads the numbers from the database.
+    protected override void OnInitialized()
+    {
+        vehicleCount = Reader.CountLatestVehicles();
+        minutes = Reader.MinutesSinceLastSuccessfulPoll();
+    }
+}
