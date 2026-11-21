@@ -1,0 +1,42 @@
+@page "/stop/{Code}"
+@inject Dictionary<string, Stop> Stops
+@inject CollectorReader Reader
+
+@if (stop == null)
+{
+    <p>Unknown stop code.</p>
+}
+else
+{
+    <h1>@stop.StopName (@stop.StopCode)</h1>
+
+    <label>Radius (km):
+        <input type="number" step="0.5" min="0.5" @bind="radiusKm" />
+    </label>
+
+    <p>@nearby.Count vehicles within @radiusKm km</p>
+    <ul>
+        @foreach (NearbyVehicle v in nearby)
+        {
+            <li>Vehicle @v.VehicleId, route @v.RouteId: @v.DistanceKm.ToString("F2") km</li>
+        }
+    </ul>
+}
+
+@code {
+    // Filled from the address: /stop/8269 gives Code = "8269".
+    [Parameter] public string Code { get; set; } = "";
+
+    private Stop? stop;
+    private List<VehicleSnapshot> vehicles = new List<VehicleSnapshot>();
+    private double radiusKm = 1.0;
+
+    // Runs whenever Code changes: looks the stop up and reads the latest vehicle snapshot.
+    protected override void OnParametersSet()
+    {
+        Stops.TryGetValue(Code, out stop);
+        vehicles = Reader.GetLatestVehicles();
+    }
+
+    private List<NearbyVehicle> nearby => BusLogic.FindNearbyVehicles(Code, radiusKm, Stops, vehicles);
+}

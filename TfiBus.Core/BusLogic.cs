@@ -36,43 +36,43 @@ public static class BusLogic
         return distance;
     }
 
-        // Same method as before, now returning Stop objects keyed by stop_code.
-        public static Dictionary<string, Stop> BuildStopLookup(string filePath)
-        {
+    // Same method as before, now returning Stop objects keyed by stop_code.
+    public static Dictionary<string, Stop> BuildStopLookup(string filePath)
+    {
         // This initializes an empty dictionary
         Dictionary<string, Stop> stops = new Dictionary<string, Stop>();
 
-            //removed try catch and writeline
+        //removed try catch and writeline
 
-                //this is a declaration to cleanup after the file had been read, similar to fclose in python. Basically closes when the block ends.
-                using StreamReader reader = new StreamReader(filePath);
-                    using CsvReader csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+        //this is a declaration to cleanup after the file had been read, similar to fclose in python. Basically closes when the block ends.
+        using StreamReader reader = new StreamReader(filePath);
+        using CsvReader csv = new CsvReader(reader, CultureInfo.InvariantCulture);
 
-                csv.Read();//move to the first line of the file being read
-
-
-                csv.ReadHeader();
-                //read the first line as the column names
-                //for example, ours looks like this:
-                //stop_id,stop_code,stop_name,stop_desc, etc.
-
-                while (csv.Read()) //this will be advandcing the rows in the stops.txt from TFI
-                {
-                        // Build one Stop per row. This is the "store the entire row" part
-                        Stop stop = new Stop();
-                        stop.StopId = csv.GetField<string>("stop_id") ?? "";
-                        stop.StopCode = csv.GetField<string>("stop_code") ?? "";
-                        stop.StopName = csv.GetField<string>("stop_name") ?? "";
-                        stop.Lat = csv.GetField<double>("stop_lat");
-                        stop.Lon = csv.GetField<double>("stop_lon");
-
-                        if (stop.StopCode == "") { continue; } // skip rows with no code
-                        stops[stop.StopCode] = stop; // store the Stop object keyed by stop_code
-                }
+        csv.Read();//move to the first line of the file being read
 
 
-            return stops;
+        csv.ReadHeader();
+        //read the first line as the column names
+        //for example, ours looks like this:
+        //stop_id,stop_code,stop_name,stop_desc, etc.
+
+        while (csv.Read()) //this will be advandcing the rows in the stops.txt from TFI
+        {
+            // Build one Stop per row. This is the "store the entire row" part
+            Stop stop = new Stop();
+            stop.StopId = csv.GetField<string>("stop_id") ?? "";
+            stop.StopCode = csv.GetField<string>("stop_code") ?? "";
+            stop.StopName = csv.GetField<string>("stop_name") ?? "";
+            stop.Lat = csv.GetField<double>("stop_lat");
+            stop.Lon = csv.GetField<double>("stop_lon");
+
+            if (stop.StopCode == "") { continue; } // skip rows with no code
+            stops[stop.StopCode] = stop; // store the Stop object keyed by stop_code
         }
+
+
+        return stops;
+    }
 
     // Return every stop whose name contains the query text, it also ignores upper/lower case
     // List<Stop> is a resizable list of Stop objects
@@ -93,7 +93,7 @@ public static class BusLogic
 
         foreach (Stop stop in stopDict.Values) // Iterate over the values of the dictionary, which are Stop objects
         {
-           // Check if the stop name contains the query string, ignoring case
+            // Check if the stop name contains the query string, ignoring case
             if (stop.StopName.Contains(cleanQuery, StringComparison.OrdinalIgnoreCase))
             {
                 results.Add(stop); // Equivalent to Python's to append
@@ -135,7 +135,7 @@ public static class BusLogic
             double vehicleLat = entity.Vehicle.Position.Latitude;
             double vehicleLon = entity.Vehicle.Position.Longitude; //fixed double latitude conversion showing instead of longitude
             //distance in km between the stop and this vehicle, using the haversine formula
-            double distanceKm = HaversineFormula(stop.Lat, stop.Lon,vehicleLat, vehicleLon);
+            double distanceKm = HaversineFormula(stop.Lat, stop.Lon, vehicleLat, vehicleLon);
 
             if (distanceKm <= radiusKm)
             {
@@ -151,6 +151,35 @@ public static class BusLogic
             }
 
         }
+        return nearby;
+    }
+
+    // Like GetNearbyVehicles, but over database snapshots instead of a protobuf feed,
+    // and sorted nearest first.
+    public static List<NearbyVehicle> FindNearbyVehicles(string stopCode, double radiusKm,
+        Dictionary<string, Stop> stopDict, List<VehicleSnapshot> vehicles)
+    {
+        List<NearbyVehicle> nearby = new List<NearbyVehicle>();
+        if (!stopDict.TryGetValue(stopCode, out Stop? stop))
+        {
+            return nearby;
+        }
+
+        foreach (VehicleSnapshot vehicle in vehicles)
+        {
+            double distanceKm = HaversineFormula(stop.Lat, stop.Lon, vehicle.Latitude, vehicle.Longitude);
+            if (distanceKm <= radiusKm)
+            {
+                NearbyVehicle found = new NearbyVehicle();
+                found.VehicleId = vehicle.VehicleId;
+                found.RouteId = vehicle.RouteId;
+                found.DistanceKm = distanceKm;
+                nearby.Add(found);
+            }
+        }
+
+        // A lambda (a, b => ...) is a tiny unnamed function; Sort calls it to compare two items.
+        nearby.Sort((a, b) => a.DistanceKm.CompareTo(b.DistanceKm));
         return nearby;
     }
 

@@ -1,0 +1,30 @@
+@page "/stops"
+@inject Dictionary<string, Stop> StopsByCode
+
+<PageTitle>Find a stop</PageTitle>
+<h1>Find a stop</h1>
+
+<label for="query">Stop name:</label>
+@* oninput updates the results on every keystroke instead of when the box loses focus *@
+<input id="query" @bind="query" @bind:event="oninput" />
+
+@if (results.Count == 0 && query.Trim() != "")
+{
+    <p>No stops found.</p>
+}
+else
+{
+    <ul>
+        @foreach (Stop stop in results.Take(50))
+        {
+            <li><a href="/stop/@stop.StopCode">@stop.StopName (@stop.StopCode)</a></li>
+        }
+    </ul>
+}
+
+@code {
+    private string query = "";
+
+    // Recomputed each time the page renders, using the tested search function.
+    private List<Stop> results => BusLogic.SearchStopsByName(query, StopsByCode);
+}
