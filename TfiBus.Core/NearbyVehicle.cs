@@ -5,4 +5,6 @@ public class NearbyVehicle
 {
     public string VehicleId { get; set; } = "";
     public double DistanceKm { get; set; }
+
+    public string RouteId { get; set; } = "";
 }

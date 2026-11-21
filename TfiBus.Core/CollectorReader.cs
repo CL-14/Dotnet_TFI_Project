@@ -35,4 +35,33 @@ public class CollectorReader
         if (result == null || result is DBNull) { return null; }
         return Convert.ToInt64(result);
     }
+
+    // All vehicles in the latest snapshot. SqliteDataReader hands back one row at a time
+    // columns are read by their position in the SELECT list.
+    public List<VehicleSnapshot> GetLatestVehicles()
+    {
+        List<VehicleSnapshot> result = new List<VehicleSnapshot>();
+        using SqliteConnection connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = @"SELECT vehicle_id, trip_id, route_id, start_date, start_time,
+                                       latitude, longitude, bearing, position_time
+                                FROM vehicle_latest";
+        using SqliteDataReader reader = command.ExecuteReader();
+        while (reader.Read())   // moves to the next row; false when there are no more
+        {
+            VehicleSnapshot v = new VehicleSnapshot();
+            v.VehicleId = reader.GetString(0);
+            v.TripId = reader.IsDBNull(1) ? "" : reader.GetString(1);   // IsDBNull checks for a database NULL
+            v.RouteId = reader.IsDBNull(2) ? "" : reader.GetString(2);
+            v.StartDate = reader.IsDBNull(3) ? "" : reader.GetString(3);
+            v.StartTime = reader.IsDBNull(4) ? "" : reader.GetString(4);
+            v.Latitude = reader.GetDouble(5);
+            v.Longitude = reader.GetDouble(6);
+            v.Bearing = reader.IsDBNull(7) ? 0 : reader.GetDouble(7);
+            v.PositionTime = reader.IsDBNull(8) ? 0 : reader.GetInt64(8);
+            result.Add(v);
+        }
+        return result;
+    }
 }

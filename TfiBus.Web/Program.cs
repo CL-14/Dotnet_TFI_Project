@@ -6,6 +6,10 @@ var builder = WebApplication.CreateBuilder(args);
 string dbPath = builder.Configuration["Collector:DatabasePath"] ?? "collector.db";
 builder.Services.AddSingleton(new CollectorReader(dbPath));
 
+string stopsPath = builder.Configuration["Gtfs:StopsPath"] ?? "GTFS_Realtime/stops.txt";
+// Loaded once when the site starts and shared by every page.
+builder.Services.AddSingleton(BusLogic.BuildStopLookup(stopsPath));
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
