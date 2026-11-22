@@ -1,0 +1,49 @@
+@page "/reliability"
+@inject CollectorReader Reader
+
+<PageTitle>Reliability</PageTitle>
+<h1>How many scheduled buses never show up?</h1>
+
+<p>
+    For each finished day, this compares the bus trips the NTA predicts with the trips that a tracked
+    vehicle actually reported. <strong>Silent</strong> trips are ones the NTA still lists as scheduled
+    that no vehicle ever reported. These are estimates: a silent trip may be a bus that ran without being tracked.
+</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Predicted</th>
+            <th>Cancelled</th>
+            <th>Never seen</th>
+            <th>Silent</th>
+            <th>Silent %</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (DailyReliability day in days)
+        {
+            <tr>
+                <td>@day.StartDate</td>
+                <td>@day.Predicted</td>
+                <td>@day.Cancelled</td>
+                <td>@day.NeverSeen</td>
+                <td>@day.Silent</td>
+                <td>@(day.SilentPercent.ToString("F1"))%</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<p><small>Source: National Transport Authority, provided "as is". Rail and Luas are excluded.</small></p>
+
+@code {
+    private List<DailyReliability> days = new List<DailyReliability>();
+
+    // Runs once when the page is created: reads the last 14 finished days.
+    protected override void OnInitialized()
+    {
+        days = Reader.GetDailyReliability(14);
+    }
+}
