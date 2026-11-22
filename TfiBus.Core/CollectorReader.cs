@@ -64,4 +64,40 @@ public class CollectorReader
         }
         return result;
     }
+
+    // Bus reliability per finished day, newest first. The day filter is a stand-in until route types
+    // from the static schedule are used: it excludes rail codes (with a dash) and Luas (starting 10000).
+    public List<DailyReliability> GetDailyReliability(int daysBack)
+    {
+        List<DailyReliability> result = new List<DailyReliability>();
+        using SqliteConnection connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = @"
+            SELECT p.start_date,
+                   COUNT(*),
+                   SUM(CASE WHEN p.schedule_relationship = 'Canceled' THEN 1 ELSE 0 END),
+                   SUM(CASE WHEN o.trip_id IS NULL THEN 1 ELSE 0 END),
+                   SUM(CASE WHEN o.trip_id IS NULL AND p.schedule_relationship <> 'Canceled' THEN 1 ELSE 0 END)
+            FROM trip_predicted p
+            LEFT JOIN trip_observed o ON o.start_date = p.start_date AND o.trip_id = p.trip_id
+            WHERE p.start_date >= strftime('%Y%m%d', 'now', $offset)
+              AND p.start_date < strftime('%Y%m%d', 'now')
+              AND p.route_id NOT LIKE '%-%' AND p.route_id NOT LIKE '10000%'
+            GROUP BY p.start_date ORDER BY p.start_date DESC";
+        command.Parameters.AddWithValue("$offset", $"-{daysBack} days");
+
+        using SqliteDataReader reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            DailyReliability day = new DailyReliability();
+            day.StartDate = reader.GetString(0);
+            day.Predicted = reader.GetInt32(1);
+            day.Cancelled = reader.GetInt32(2);
+            day.NeverSeen = reader.GetInt32(3);
+            day.Silent = reader.GetInt32(4);
+            result.Add(day);
+        }
+        return result;
+    }
 }
