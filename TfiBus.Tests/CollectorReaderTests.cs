@@ -54,12 +54,35 @@ public class CollectorReaderTests : IDisposable
             new ObservedTrip { StartDate = "20250101", TripId = "T1", RouteId = "3_N6" }
         }, 1000);
 
-        List<DailyReliability> days = new CollectorReader(_dbPath).GetDailyReliability(5000);
+        // The day needs successful polls on both feeds to count as complete.
+        db.LogPoll("Vehicles", true, 200, 10, null, 1735700000);      // 1 Jan 2025, 03:33 UTC
+        db.LogPoll("TripUpdates", true, 200, 10, null, 1735700000);
+
+        List<DailyReliability> days = new CollectorReader(_dbPath).GetDailyReliability(5000, 1);
 
         Assert.Single(days);
         Assert.Equal(3, days[0].Predicted);
         Assert.Equal(1, days[0].Cancelled);
         Assert.Equal(2, days[0].NeverSeen);
         Assert.Equal(1, days[0].Silent);
+    }
+
+    // The daily reliability figures should hide days with too few successful polls.
+    [Fact]
+    public void GetDailyReliability_HidesDaysWithTooFewSuccessfulPolls()
+    {
+        CollectorDatabase db = new CollectorDatabase(_dbPath);
+        db.CreateTables();
+        db.RecordPredictedTrips(new List<PredictedTrip>
+        {
+            new PredictedTrip { StartDate = "20250101", TripId = "T1", RouteId = "3_N6", ScheduleRelationship = "Scheduled" }
+        }, 1000);
+        db.LogPoll("Vehicles", true, 200, 10, null, 1735700000);      // only one poll per feed that day
+        db.LogPoll("TripUpdates", true, 200, 10, null, 1735700000);
+
+        CollectorReader reader = new CollectorReader(_dbPath);
+
+        Assert.Single(reader.GetDailyReliability(5000, 1));   // one poll is enough when the minimum is 1
+        Assert.Empty(reader.GetDailyReliability(5000, 2));    // two are required, so the day is hidden
     }
 }

@@ -44,6 +44,6 @@
     // Runs once when the page is created: reads the last 14 finished days.
     protected override void OnInitialized()
     {
-        days = Reader.GetDailyReliability(14);
+        days = Reader.GetDailyReliability(14, 500);
     }
 }
