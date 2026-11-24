@@ -67,26 +67,36 @@ public class CollectorReader
 
     // Bus reliability per finished day, newest first. The day filter is a stand-in until route types
     // from the static schedule are used: it excludes rail codes (with a dash) and Luas (starting 10000).
-    public List<DailyReliability> GetDailyReliability(int daysBack)
+    public List<DailyReliability> GetDailyReliability(int daysBack, int minPollsPerFeed)
     {
         List<DailyReliability> result = new List<DailyReliability>();
         using SqliteConnection connection = new SqliteConnection(_connectionString);
         connection.Open();
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = @"
+            WITH polls AS (
+                -- successful polls per day and per feed, from the poll log (polled_at is Unix time, UTC)
+                SELECT strftime('%Y%m%d', polled_at, 'unixepoch') AS poll_day,
+                       SUM(CASE WHEN feed = 'Vehicles' AND ok = 1 THEN 1 ELSE 0 END) AS vehicle_polls,
+                       SUM(CASE WHEN feed = 'TripUpdates' AND ok = 1 THEN 1 ELSE 0 END) AS trip_polls
+                FROM poll_log
+                GROUP BY poll_day
+            )
             SELECT p.start_date,
                    COUNT(*),
                    SUM(CASE WHEN p.schedule_relationship = 'Canceled' THEN 1 ELSE 0 END),
                    SUM(CASE WHEN o.trip_id IS NULL THEN 1 ELSE 0 END),
                    SUM(CASE WHEN o.trip_id IS NULL AND p.schedule_relationship <> 'Canceled' THEN 1 ELSE 0 END)
             FROM trip_predicted p
+            JOIN polls c ON c.poll_day = p.start_date
+                        AND c.vehicle_polls >= $minPolls AND c.trip_polls >= $minPolls
             LEFT JOIN trip_observed o ON o.start_date = p.start_date AND o.trip_id = p.trip_id
             WHERE p.start_date >= strftime('%Y%m%d', 'now', $offset)
               AND p.start_date < strftime('%Y%m%d', 'now')
               AND p.route_id NOT LIKE '%-%' AND p.route_id NOT LIKE '10000%'
             GROUP BY p.start_date ORDER BY p.start_date DESC";
         command.Parameters.AddWithValue("$offset", $"-{daysBack} days");
-
+        command.Parameters.AddWithValue("$minPolls", minPollsPerFeed);
         using SqliteDataReader reader = command.ExecuteReader();
         while (reader.Read())
         {
