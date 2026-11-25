@@ -10,6 +10,9 @@ string stopsPath = builder.Configuration["Gtfs:StopsPath"] ?? "GTFS_Realtime/sto
 // Loaded once when the site starts and shared by every page.
 builder.Services.AddSingleton(BusLogic.BuildStopLookup(stopsPath));
 
+string routesPath = builder.Configuration["Gtfs:RoutesPath"] ?? "GTFS_Realtime/routes.txt";
+builder.Services.AddSingleton(BusLogic.LoadRoutes(routesPath)); // Loaded once when the site starts and shared by every page.
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

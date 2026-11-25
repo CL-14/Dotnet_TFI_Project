@@ -1,6 +1,9 @@
 @page "/reliability"
 @inject CollectorReader Reader
 
+@inject CollectorReader Reader
+@inject Dictionary<string, RouteInfo> RoutesById
+
 <PageTitle>Reliability</PageTitle>
 <h1>How many scheduled buses never show up?</h1>
 
@@ -36,14 +39,42 @@
     </tbody>
 </table>
 
-<p><small>Source: National Transport Authority, provided "as is". Rail and Luas are excluded.</small></p>
+<h2>Routes with the most silent trips</h2>
+<p>Over the last 14 complete days, routes with at least 100 trips.</p>
+<table>
+    <thead>
+        <tr>
+            <th>Route</th>
+            <th>Predicted</th>
+            <th>Silent</th>
+            <th>Silent %</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (RouteReliability route in worstRoutes)
+        {
+            <tr>
+                <td>@route.Name</td>
+                <td>@route.Predicted</td>
+                <td>@route.Silent</td>
+                <td>@(route.SilentPercent.ToString("F1"))%</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<p><small>Source: National Transport Authority, provided "as is". Only bus routes (route type 3 in the schedule) are
+included.</small></p>
 
 @code {
     private List<DailyReliability> days = new List<DailyReliability>();
+    private List<RouteReliability> worstRoutes = new List<RouteReliability>();
 
-    // Runs once when the page is created: reads the last 14 finished days.
+    // Reads one row per day and route, then totals them for buses only.
     protected override void OnInitialized()
     {
-        days = Reader.GetDailyReliability(14, 500);
+        List<RouteDayReliability> rows = Reader.GetRouteDayReliability(14, 500);
+        days = ReliabilityCalculator.Daily(rows, RoutesById);
+        worstRoutes = ReliabilityCalculator.ByRoute(rows, RoutesById, 100).Take(15).ToList();
     }
 }

@@ -65,24 +65,23 @@ public class CollectorReader
         return result;
     }
 
-    // Bus reliability per finished day, newest first. The day filter is a stand-in until route types
-    // from the static schedule are used: it excludes rail codes (with a dash) and Luas (starting 10000).
-    public List<DailyReliability> GetDailyReliability(int daysBack, int minPollsPerFeed)
+    // One row per day and route for finished days with enough successful polls on both feeds.
+    // A day with fewer than minPollsPerFeed successful polls on either feed is left out.
+    public List<RouteDayReliability> GetRouteDayReliability(int daysBack, int minPollsPerFeed)
     {
-        List<DailyReliability> result = new List<DailyReliability>();
+        List<RouteDayReliability> result = new List<RouteDayReliability>();
         using SqliteConnection connection = new SqliteConnection(_connectionString);
         connection.Open();
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = @"
             WITH polls AS (
-                -- successful polls per day and per feed, from the poll log (polled_at is Unix time, UTC)
                 SELECT strftime('%Y%m%d', polled_at, 'unixepoch') AS poll_day,
                        SUM(CASE WHEN feed = 'Vehicles' AND ok = 1 THEN 1 ELSE 0 END) AS vehicle_polls,
                        SUM(CASE WHEN feed = 'TripUpdates' AND ok = 1 THEN 1 ELSE 0 END) AS trip_polls
                 FROM poll_log
                 GROUP BY poll_day
             )
-            SELECT p.start_date,
+            SELECT p.start_date, p.route_id,
                    COUNT(*),
                    SUM(CASE WHEN p.schedule_relationship = 'Canceled' THEN 1 ELSE 0 END),
                    SUM(CASE WHEN o.trip_id IS NULL THEN 1 ELSE 0 END),
@@ -93,20 +92,21 @@ public class CollectorReader
             LEFT JOIN trip_observed o ON o.start_date = p.start_date AND o.trip_id = p.trip_id
             WHERE p.start_date >= strftime('%Y%m%d', 'now', $offset)
               AND p.start_date < strftime('%Y%m%d', 'now')
-              AND p.route_id NOT LIKE '%-%' AND p.route_id NOT LIKE '10000%'
-            GROUP BY p.start_date ORDER BY p.start_date DESC";
+            GROUP BY p.start_date, p.route_id";
         command.Parameters.AddWithValue("$offset", $"-{daysBack} days");
         command.Parameters.AddWithValue("$minPolls", minPollsPerFeed);
+
         using SqliteDataReader reader = command.ExecuteReader();
         while (reader.Read())
         {
-            DailyReliability day = new DailyReliability();
-            day.StartDate = reader.GetString(0);
-            day.Predicted = reader.GetInt32(1);
-            day.Cancelled = reader.GetInt32(2);
-            day.NeverSeen = reader.GetInt32(3);
-            day.Silent = reader.GetInt32(4);
-            result.Add(day);
+            RouteDayReliability row = new RouteDayReliability();
+            row.StartDate = reader.GetString(0);
+            row.RouteId = reader.IsDBNull(1) ? "" : reader.GetString(1);
+            row.Predicted = reader.GetInt32(2);
+            row.Cancelled = reader.GetInt32(3);
+            row.NeverSeen = reader.GetInt32(4);
+            row.Silent = reader.GetInt32(5);
+            result.Add(row);
         }
         return result;
     }
