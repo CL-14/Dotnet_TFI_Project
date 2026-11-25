@@ -6,7 +6,7 @@ COPY TfiBus.Web/TfiBus.Web.csproj TfiBus.Web/
 RUN dotnet restore TfiBus.Web/TfiBus.Web.csproj
 COPY TfiBus.Core/ TfiBus.Core/
 COPY TfiBus.Web/ TfiBus.Web/
-RUN dotnet publish TfiBus.Web/TfiBus.Web.csproj -c Release -o /app --no-restore
+RUN dotnet publish TfiBus.Web/TfiBus.Web.csproj -c Release -o /app
 
 #the ASP.NET runtime image (the collector used the plain runtime; a website needs this one).
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
