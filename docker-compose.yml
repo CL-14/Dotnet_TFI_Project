@@ -14,3 +14,18 @@ services:
       options:
         max-size: "10m" # without this Docker logs grow forever
         max-file: "3"
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    user: "1000:1000"
+    restart: unless-stopped
+    ports:
+      - "5080:8080" # host port 5080, container port 8080
+    environment:
+      Collector__DatabasePath: /data/collector.db
+      Gtfs__StopsPath: /gtfs/stops.txt
+      Gtfs__RoutesPath: /gtfs/routes.txt
+    volumes:
+      - ./data:/data # the collector's database; the site opens it read-only
+      - ./gtfs:/gtfs:ro # the two static files, mounted read-only
