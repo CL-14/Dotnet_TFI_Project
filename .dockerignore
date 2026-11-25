@@ -6,6 +6,7 @@
 *.db-wal
 *.db-shm
 GTFS_Realtime/
+gtfs/
 reports/
 data/
 backups/

@@ -1,0 +1,15 @@
+#build with the full SDK.
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY TfiBus.Core/TfiBus.Core.csproj TfiBus.Core/
+COPY TfiBus.Web/TfiBus.Web.csproj TfiBus.Web/
+RUN dotnet restore TfiBus.Web/TfiBus.Web.csproj
+COPY TfiBus.Core/ TfiBus.Core/
+COPY TfiBus.Web/ TfiBus.Web/
+RUN dotnet publish TfiBus.Web/TfiBus.Web.csproj -c Release -o /app --no-restore
+
+#the ASP.NET runtime image (the collector used the plain runtime; a website needs this one).
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+WORKDIR /app
+COPY --from=build /app .
+ENTRYPOINT ["dotnet", "TfiBus.Web.dll"]
