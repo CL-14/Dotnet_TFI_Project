@@ -74,6 +74,29 @@ public static class BusLogic
         return stops;
     }
 
+    // Loads routes.txt into a dictionary keyed by route id.
+    public static Dictionary<string, RouteInfo> LoadRoutes(string filePath)
+    {
+        Dictionary<string, RouteInfo> routes = new Dictionary<string, RouteInfo>();
+
+        using StreamReader reader = new StreamReader(filePath);
+        using CsvReader csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+        csv.Read();
+        csv.ReadHeader();
+
+        while (csv.Read())
+        {
+            RouteInfo route = new RouteInfo();
+            route.RouteId = csv.GetField<string>("route_id") ?? "";
+            route.ShortName = csv.GetField<string>("route_short_name") ?? "";
+            route.LongName = csv.GetField<string>("route_long_name") ?? "";
+            route.RouteType = csv.GetField<int>("route_type");
+            if (route.RouteId != "") { routes[route.RouteId] = route; }
+        }
+
+        return routes;
+    }
+
     // Return every stop whose name contains the query text, it also ignores upper/lower case
     // List<Stop> is a resizable list of Stop objects
     public static List<Stop> SearchStopsByName(string query, Dictionary<string, Stop> stopDict)
