@@ -1,0 +1,57 @@
+@page "/alerts"
+@inject CollectorReader Reader
+
+<PageTitle>Service alerts</PageTitle>
+<h1>Service alerts</h1>
+
+<label for="filter">Filter by route, stop or text:</label>
+@* oninput filters on every keystroke *@
+<input id="filter" @bind="filter" @bind:event="oninput" />
+
+<p>@shown.Count of @alertList.Count alerts</p>
+
+@foreach (AlertRecord alert in shown)
+{
+    <section>
+        <h2>@alert.Header</h2>
+        <p><small>Severity: @alert.Severity. Routes: @(alert.RouteIds == "" ? "none listed" : alert.RouteIds)</small></p>
+        <p>@alert.Description</p>
+        <p><small>@Period(alert)</small></p>
+    </section>
+}
+
+<p><small>Source: National Transport Authority, provided "as is".</small></p>
+
+@code {
+    private List<AlertRecord> alertList = new List<AlertRecord>();
+    private string filter = "";
+
+    protected override void OnInitialized()
+    {
+        alertList = Reader.GetCurrentAlerts();
+    }
+
+    // Alerts whose header, description, routes or stops contain the filter text.
+    private List<AlertRecord> shown => alertList.Where(a => Matches(a)).ToList();
+
+    private bool Matches(AlertRecord a)
+    {
+        string text = filter.Trim();
+        if (text == "") { return true; }
+        return a.Header.Contains(text, StringComparison.OrdinalIgnoreCase)
+            || a.Description.Contains(text, StringComparison.OrdinalIgnoreCase)
+            || a.RouteIds.Contains(text, StringComparison.OrdinalIgnoreCase)
+            || a.StopIds.Contains(text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // The validity period as text. The feed uses a far-future date to mean "no end".
+    private static string Period(AlertRecord a)
+    {
+        if (a.ActiveFrom == null && a.ActiveTo == null) { return ""; }
+        string from = a.ActiveFrom == null ? "" : "From " + DateTimeOffset.FromUnixTimeSeconds(a.ActiveFrom.Value).ToString("d MMM yyyy HH:mm") + " UTC. ";
+        string until = (a.ActiveTo == null || a.ActiveTo.Value > 4102444800)
+            ? "Until further notice."
+            : "Until " + DateTimeOffset.FromUnixTimeSeconds(a.ActiveTo.Value).ToString("d MMM yyyy HH:mm") + " UTC.";
+        return from + until;
+    }
+}

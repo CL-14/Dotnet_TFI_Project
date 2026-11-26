@@ -69,4 +69,25 @@ public class CollectorReaderTests : IDisposable
         Assert.Empty(reader.GetRouteDayReliability(5000, 2));   // two polls required: the day is hidden
     }
 
+    // The collector reader should be able to read back the current alerts, including those with no active period.
+    [Fact]
+    public void GetCurrentAlerts_ReadsBackTheStoredAlerts_IncludingMissingPeriods()
+    {
+        CollectorDatabase db = new CollectorDatabase(_dbPath);
+        db.CreateTables();
+        db.ReplaceCurrentAlerts(new List<AlertRecord>
+        {
+            new AlertRecord { AlertId = "A1", Header = "Diversion on Route E2", RouteIds = "R1,R2", ActiveFrom = 100, ActiveTo = 200, Severity = "Warning" },
+            new AlertRecord { AlertId = "A2", Header = "Delays" }   // no period
+        }, 1000);
+
+        List<AlertRecord> alerts = new CollectorReader(_dbPath).GetCurrentAlerts();
+
+        Assert.Equal(2, alerts.Count);
+        AlertRecord first = alerts.Single(a => a.AlertId == "A1");
+        Assert.Equal("R1,R2", first.RouteIds);
+        Assert.Equal(200, first.ActiveTo);
+        Assert.Null(alerts.Single(a => a.AlertId == "A2").ActiveFrom);
+    }
+
 }

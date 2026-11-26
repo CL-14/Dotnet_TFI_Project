@@ -1,0 +1,24 @@
+@inject CollectorReader Reader
+
+@if (minutes == null)
+{
+    <p>No data has been collected yet.</p>
+}
+else if (minutes > 10)
+{
+    <p style="color:#b00020"><strong>Warning:</strong> the last successful update was @minutes minutes ago, so live
+        information may be out of date.</p>
+    }
+else
+    {
+        <p><small>Live data updated @minutes minute(s) ago.</small></p>
+    }
+
+@code {
+    private long? minutes;
+
+    protected override void OnInitialized()
+    {
+        minutes = Reader.MinutesSinceLastSuccessfulPoll();
+    }
+}

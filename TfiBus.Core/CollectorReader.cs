@@ -110,4 +110,31 @@ public class CollectorReader
         }
         return result;
     }
+
+    // The alerts from the latest poll, as plain records.
+    public List<AlertRecord> GetCurrentAlerts()
+    {
+        List<AlertRecord> result = new List<AlertRecord>();
+        using SqliteConnection connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = @"SELECT alert_id, header, description, route_ids, stop_ids,
+                                       active_from, active_to, severity
+                                FROM alert_current ORDER BY header";
+        using SqliteDataReader reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            AlertRecord alert = new AlertRecord();
+            alert.AlertId = reader.GetString(0);
+            alert.Header = reader.IsDBNull(1) ? "" : reader.GetString(1);
+            alert.Description = reader.IsDBNull(2) ? "" : reader.GetString(2);
+            alert.RouteIds = reader.IsDBNull(3) ? "" : reader.GetString(3);
+            alert.StopIds = reader.IsDBNull(4) ? "" : reader.GetString(4);
+            alert.ActiveFrom = reader.IsDBNull(5) ? null : reader.GetInt64(5);
+            alert.ActiveTo = reader.IsDBNull(6) ? null : reader.GetInt64(6);
+            alert.Severity = reader.IsDBNull(7) ? "" : reader.GetString(7);
+            result.Add(alert);
+        }
+        return result;
+    }
 }
