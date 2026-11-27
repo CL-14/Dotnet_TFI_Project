@@ -7,6 +7,8 @@
     <base href="/" />
     <ResourcePreloader />
     <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
+    @* Leaflet's styles (map controls, pop-ups); needed by the live map page. *@
+    <link rel="stylesheet" href="@Assets["lib/leaflet/dist/leaflet.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["TfiBus.Web.styles.css"]" />
     <ImportMap />
@@ -17,6 +19,9 @@
 <body>
     <Routes @rendermode="InteractiveServer" />
     <ReconnectModal />
+    @* Leaflet (the map library) first, then our map code that uses it. *@
+    <script src="@Assets["lib/leaflet/dist/leaflet.js"]"></script>
+    <script src="@Assets["js/busMap.js"]"></script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>
 

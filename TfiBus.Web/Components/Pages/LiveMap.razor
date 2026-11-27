@@ -1,0 +1,99 @@
+@page "/map"
+@using Microsoft.Data.Sqlite
+@inject CollectorReader Reader
+@inject Dictionary<string, RouteInfo> RoutesById
+@* IJSRuntime is Blazor's service for calling JavaScript functions from C#. *@
+@inject IJSRuntime JS
+@* IAsyncDisposable lets Blazor tell the page to clean up (stop the timer, remove the map) when the user leaves. *@
+@implements IAsyncDisposable
+
+<PageTitle>Live map</PageTitle>
+<h1>Live map</h1>
+
+@* role="status" makes screen readers announce changes to this text, such as the bus count or an error. *@
+<p role="status">@status</p>
+
+@* Leaflet fills this element. Blazor renders it once and then leaves its contents to the JavaScript. *@
+<div id="bus-map" class="bus-map" role="region" aria-label="Map of buses currently tracked"></div>
+
+<p><small>
+    Each dot is a bus that reported its position in the latest poll; click one for its route.
+    The map refreshes every minute. For a text alternative, use <a href="stops">Stops</a>.
+    Source: National Transport Authority, provided "as is".
+</small></p>
+
+@code {
+    private string status = "Loading the map...";
+    private PeriodicTimer? timer;
+
+    // True once this copy of the page has created the map in the browser.
+    // Blazor first builds the page on the server ("prerendering") with no browser connected,
+    // then throws that copy away; that copy never creates a map, so it must not try to remove one.
+    private bool mapCreated = false;
+
+    // OnAfterRenderAsync runs after the page's HTML is in the browser. The map must be created
+    // here, not in OnInitialized, because the "bus-map" element only exists from this point.
+    // firstRender is true only the first time, so the map is created once.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) { return; }
+
+        await JS.InvokeVoidAsync("busMap.create", "bus-map");
+        mapCreated = true;
+        await ShowVehiclesAsync();
+
+        // The collector refreshes vehicle positions every few minutes, so once a minute is enough.
+        timer = new PeriodicTimer(TimeSpan.FromSeconds(60));
+        _ = RefreshEveryMinute();   // "_ =" starts the loop without waiting for it
+    }
+
+    // Reads the latest positions, turns them into map data and hands them to the JavaScript.
+    private async Task ShowVehiclesAsync()
+    {
+        try
+        {
+            List<VehicleSnapshot> snapshots = Reader.GetLatestVehicles();
+            List<MapVehicle> vehicles = BusLogic.BuildMapVehicles(snapshots, RoutesById);
+            await JS.InvokeVoidAsync("busMap.showVehicles", vehicles);
+            status = vehicles.Count + " buses on the map.";
+        }
+        catch (SqliteException)
+        {
+            // The database could not be read (e.g. missing file). Tell the user instead of crashing the page.
+            status = "Bus positions could not be loaded right now. The map will try again in a minute.";
+        }
+        StateHasChanged();   // redraw the status text
+    }
+
+    // Each tick refreshes the buses. WaitForNextTickAsync returns false once the timer is disposed.
+    private async Task RefreshEveryMinute()
+    {
+        try
+        {
+            while (await timer!.WaitForNextTickAsync())
+            {
+                // The tick runs outside Blazor's normal flow; InvokeAsync runs the update on the component safely.
+                await InvokeAsync(ShowVehiclesAsync);
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // The browser tab was closed between ticks; there is nothing left to update.
+        }
+    }
+
+    // Called when the user leaves the page: stop the timer and remove the map from the browser.
+    public async ValueTask DisposeAsync()
+    {
+        timer?.Dispose();
+        if (!mapCreated) { return; }   // the prerendered copy: no browser, no map, nothing to remove
+        try
+        {
+            await JS.InvokeVoidAsync("busMap.destroy");
+        }
+        catch (JSDisconnectedException)
+        {
+            // The tab is already gone, so its map is gone too.
+        }
+    }
+}
