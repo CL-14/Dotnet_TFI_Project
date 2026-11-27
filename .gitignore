@@ -48,3 +48,6 @@ TestResults/
 *.bak
 *.cache
 *.DotSettings.user
+
+# Personal notes and handover files, not part of the project
+assets/

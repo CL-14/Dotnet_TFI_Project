@@ -1,5 +1,6 @@
 @page "/alerts"
 @inject CollectorReader Reader
+@inject Dictionary<string, RouteInfo> RoutesById
 
 <PageTitle>Service alerts</PageTitle>
 <h1>Service alerts</h1>
@@ -14,7 +15,7 @@
 {
     <section>
         <h2>@alert.Header</h2>
-        <p><small>Severity: @alert.Severity. Routes: @(alert.RouteIds == "" ? "none listed" : alert.RouteIds)</small></p>
+        <p><small>Severity: @alert.Severity. Routes: @RouteNames(alert)</small></p>
         <p>@alert.Description</p>
         <p><small>@Period(alert)</small></p>
     </section>
@@ -41,17 +42,65 @@
         return a.Header.Contains(text, StringComparison.OrdinalIgnoreCase)
             || a.Description.Contains(text, StringComparison.OrdinalIgnoreCase)
             || a.RouteIds.Contains(text, StringComparison.OrdinalIgnoreCase)
+            || RouteNames(a).Contains(text, StringComparison.OrdinalIgnoreCase)
             || a.StopIds.Contains(text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Irish local time, so times match what people see on the bus stop and their phone.
+    // If the server has no time zone data (some small Docker images), fall back to UTC instead of crashing.
+    private static readonly TimeZoneInfo DisplayZone = FindDublinZone();
+
+    private static TimeZoneInfo FindDublinZone()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Europe/Dublin");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.Utc;
+        }
+    }
+
+    // Turns a Unix timestamp (seconds since 1970, in UTC) into readable local time.
+    private static string LocalTime(long unixSeconds)
+    {
+        DateTimeOffset utc = DateTimeOffset.FromUnixTimeSeconds(unixSeconds);
+        DateTimeOffset local = TimeZoneInfo.ConvertTime(utc, DisplayZone);
+        // Label the time as UTC only when the fallback was used, so the reader is never misled.
+        string suffix = DisplayZone == TimeZoneInfo.Utc ? " UTC" : "";
+        return local.ToString("d MMM yyyy HH:mm") + suffix;
     }
 
     // The validity period as text. The feed uses a far-future date to mean "no end".
     private static string Period(AlertRecord a)
     {
         if (a.ActiveFrom == null && a.ActiveTo == null) { return ""; }
-        string from = a.ActiveFrom == null ? "" : "From " + DateTimeOffset.FromUnixTimeSeconds(a.ActiveFrom.Value).ToString("d MMM yyyy HH:mm") + " UTC. ";
+        string from = a.ActiveFrom == null ? "" : "From " + LocalTime(a.ActiveFrom.Value) + ". ";
         string until = (a.ActiveTo == null || a.ActiveTo.Value > 4102444800)
             ? "Until further notice."
-            : "Until " + DateTimeOffset.FromUnixTimeSeconds(a.ActiveTo.Value).ToString("d MMM yyyy HH:mm") + " UTC.";
+            : "Until " + LocalTime(a.ActiveTo.Value) + ".";
         return from + until;
+    }
+
+    // The alert's route IDs (stored comma-separated) turned into the short names people know,
+    // such as "39A". An ID missing from routes.txt is shown as it is, so nothing is hidden.
+    private string RouteNames(AlertRecord a)
+    {
+        if (a.RouteIds == "") { return "none listed"; }
+        List<string> names = new List<string>();
+        foreach (string id in a.RouteIds.Split(',', StringSplitOptions.RemoveEmptyEntries))
+        {
+            // TryGetValue looks the key up once and reports whether it was found.
+            if (RoutesById.TryGetValue(id, out RouteInfo? route) && route.ShortName != "")
+            {
+                names.Add(route.ShortName);
+            }
+            else
+            {
+                names.Add(id);
+            }
+        }
+        return string.Join(", ", names);
     }
 }

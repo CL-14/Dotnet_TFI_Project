@@ -1,6 +1,6 @@
 ﻿<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">TfiBus.Web</a>
+        <a class="navbar-brand" href="">Where Is That Ghost Bus?</a>
     </div>
 </div>
 
@@ -14,15 +14,22 @@
             </NavLink>
         </div>
 
+        @* One link per real page. NavLink adds the "active" class when its address matches the current page. *@
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+            <NavLink class="nav-link" href="stops">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Stops
             </NavLink>
         </div>
 
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
+            <NavLink class="nav-link" href="reliability">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Reliability
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="alerts">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Alerts
             </NavLink>
         </div>
     </nav>
