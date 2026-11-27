@@ -97,6 +97,48 @@ public static class BusLogic
         return routes;
     }
 
+    // Turns the latest vehicle positions into what the live map draws.
+    // Lives here (not in the page) so the rules can be unit tested and the page stays thin
+    // Rules
+    //  - a position of 0,0 or outside valid latitude/longitude is a feed error, so it is skipped
+    //  - a vehicle on a route that routes.txt says is not a bus (route type 3) is skipped;
+    //  - a vehicle whose route is not in routes.txt is kept, labelled with its raw route id,
+    //    so nothing silently disappears from the map
+    public static List<MapVehicle> BuildMapVehicles(List<VehicleSnapshot> vehicles,
+                                                    Dictionary<string, RouteInfo> routesById)
+    {
+        List<MapVehicle> result = new List<MapVehicle>();
+
+        foreach (VehicleSnapshot vehicle in vehicles)
+        {
+            bool zeroPosition = vehicle.Latitude == 0 && vehicle.Longitude == 0;
+            bool outOfRange = Math.Abs(vehicle.Latitude) > 90 || Math.Abs(vehicle.Longitude) > 180;
+            if (zeroPosition || outOfRange) { continue; }   // continue skips to the next vehicle
+
+            MapVehicle mapVehicle = new MapVehicle();
+            mapVehicle.VehicleId = vehicle.VehicleId;
+            mapVehicle.Latitude = vehicle.Latitude;
+            mapVehicle.Longitude = vehicle.Longitude;
+            mapVehicle.PositionTime = vehicle.PositionTime;
+
+            // TryGetValue looks the route up once and reports whether it was found.
+            if (routesById.TryGetValue(vehicle.RouteId, out RouteInfo? route))
+            {
+                if (route.RouteType != 3) { continue; }   // rail or tram, not a bus
+                mapVehicle.RouteName = route.ShortName != "" ? route.ShortName : route.RouteId;
+                mapVehicle.RouteLongName = route.LongName;
+            }
+            else
+            {
+                mapVehicle.RouteName = vehicle.RouteId != "" ? vehicle.RouteId : "Unknown route";
+            }
+
+            result.Add(mapVehicle);
+        }
+
+        return result;
+    }
+
     // Return every stop whose name contains the query text, it also ignores upper/lower case
     // List<Stop> is a resizable list of Stop objects
     public static List<Stop> SearchStopsByName(string query, Dictionary<string, Stop> stopDict)
