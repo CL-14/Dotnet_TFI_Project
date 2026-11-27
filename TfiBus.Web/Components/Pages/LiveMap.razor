@@ -18,7 +18,8 @@
 
 <p><small>
     Each dot is a bus that reported its position in the latest poll; click one for its route.
-    The map refreshes every minute. For a text alternative, use <a href="stops">Stops</a>.
+    The map refreshes every minute, but the NTA only sends new positions about every two minutes,
+    so dots jump rather than glide. For a text alternative, use <a href="stops">Stops</a>.
     Source: National Transport Authority, provided "as is".
 </small></p>
 
@@ -55,7 +56,9 @@
             List<VehicleSnapshot> snapshots = Reader.GetLatestVehicles();
             List<MapVehicle> vehicles = BusLogic.BuildMapVehicles(snapshots, RoutesById);
             await JS.InvokeVoidAsync("busMap.showVehicles", vehicles);
-            status = vehicles.Count + " buses on the map.";
+            // The refresh time makes the automatic update visible: it should change every minute.
+            status = vehicles.Count.ToString("N0") + " buses on the map. Last refreshed at "
+                     + IrishTime.Format(DateTimeOffset.UtcNow, "HH:mm:ss") + ".";
         }
         catch (SqliteException)
         {

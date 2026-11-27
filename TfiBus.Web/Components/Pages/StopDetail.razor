@@ -1,26 +1,53 @@
 @page "/stop/{Code}"
-@inject Dictionary<string, Stop> Stops
+@inject Dictionary<string, Stop> StopsByCode
+@inject Dictionary<string, RouteInfo> RoutesById
 @inject CollectorReader Reader
 
 @if (stop == null)
 {
-    <p>Unknown stop code.</p>
+    <PageTitle>Unknown stop</PageTitle>
+    <h1>Unknown stop</h1>
+    <p>There is no stop with code "@Code". <a href="stops">Search for a stop</a> instead.</p>
 }
 else
 {
-    <h1>@stop.StopName (@stop.StopCode)</h1>
+    <PageTitle>@stop.StopName</PageTitle>
+    <p><a href="stops">&larr; Back to stop search</a></p>
+    <h1>@stop.StopName <span class="text-body-secondary">(@stop.StopCode)</span></h1>
 
-    <label>Radius (km):
-        <input type="number" step="0.5" min="0.5" @bind="radiusKm" />
-    </label>
+    <div class="mb-3">
+        <label for="radius" class="form-label">Radius (km):</label>
+        @* "w-auto" keeps the number box narrow instead of stretching across the page. *@
+        <input id="radius" type="number" step="0.5" min="0.5" max="10" class="form-control w-auto" @bind="radiusKm" />
+    </div>
 
-    <p>@nearby.Count vehicles within @radiusKm km</p>
-    <ul>
-        @foreach (NearbyVehicle v in nearby)
+    <section class="card">
+        <h2 class="card-header h5" role="status">@nearby.Count vehicles within @radiusKm km</h2>
+        @if (nearby.Count > 0)
         {
-            <li>Vehicle @v.VehicleId, route @v.RouteId: @v.DistanceKm.ToString("F2") km</li>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Route</th>
+                            <th scope="col">Vehicle</th>
+                            <th scope="col" class="text-end">Distance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (NearbyVehicle v in nearby)
+                        {
+                            <tr>
+                                <td>@RouteName(v.RouteId)</td>
+                                <td>@v.VehicleId</td>
+                                <td class="text-end">@v.DistanceKm.ToString("F2") km</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
-    </ul>
+    </section>
 }
 
 @code {
@@ -34,9 +61,19 @@ else
     // Runs whenever Code changes: looks the stop up and reads the latest vehicle snapshot.
     protected override void OnParametersSet()
     {
-        Stops.TryGetValue(Code, out stop);
+        StopsByCode.TryGetValue(Code, out stop);
         vehicles = Reader.GetLatestVehicles();
     }
 
-    private List<NearbyVehicle> nearby => BusLogic.FindNearbyVehicles(Code, radiusKm, Stops, vehicles);
+    private List<NearbyVehicle> nearby => BusLogic.FindNearbyVehicles(Code, radiusKm, StopsByCode, vehicles);
+
+    // The route's short name such as "39A", or the raw id if routes.txt does not have it
+    private string RouteName(string routeId)
+    {
+        if (RoutesById.TryGetValue(routeId, out RouteInfo? route) && route.ShortName != "")
+        {
+            return route.ShortName;
+        }
+        return routeId == "" ? "Unknown" : routeId;
+    }
 }

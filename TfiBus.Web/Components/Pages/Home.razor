@@ -4,17 +4,58 @@
 <PageTitle>Where Is That Ghost Bus?</PageTitle>
 
 <h1>Where Is That Ghost Bus?</h1>
-<p>Vehicles currently tracked: @vehicleCount</p>
-<p>Last successful poll: @(minutes?.ToString() ?? "never") minutes ago</p>
+<p class="lead">
+    Live bus positions from the National Transport Authority, and how often a scheduled bus
+    is predicted but never actually turns up.
+</p>
+
+@* Bootstrap grid: "row" holds the cards; "col-md-4" makes each card a third of the width on
+   medium and larger screens, and full width (stacked) on a phone. "g-3" adds space between them.
+   The last-update time is not repeated here, because the banner at the top of every page shows it. *@
+<div class="row g-3">
+    <div class="col-md-4">
+        <section class="card h-100">
+            <div class="card-body">
+                <h2 class="h5 card-title">Buses tracked now</h2>
+                <p class="display-6">@vehicleCount.ToString("N0")</p>
+                <a href="map" class="card-link">See them on the live map</a>
+            </div>
+        </section>
+    </div>
+
+    <div class="col-md-4">
+        <section class="card h-100">
+            <div class="card-body">
+                <h2 class="h5 card-title">Reliability</h2>
+                <p class="card-text">How many predicted trips were never seen, day by day and route by route.</p>
+                <a href="reliability" class="card-link">Open the reliability report</a>
+            </div>
+        </section>
+    </div>
+
+    <div class="col-md-4">
+        <section class="card h-100">
+            <div class="card-body">
+                <h2 class="h5 card-title">Service alerts</h2>
+                <p class="display-6">@alertCount</p>
+                <a href="alerts" class="card-link">Read the current alerts</a>
+            </div>
+        </section>
+    </div>
+</div>
+
+<p class="mt-4">
+    If you want to check a particular stop: <a href="stops">Find a stop</a> to see the buses near it.
+</p>
 
 @code {
     private long vehicleCount;
-    private long? minutes;
+    private int alertCount;
 
-    // Runs once when the page is created: reads the numbers from the database.
+    // Runs once when the page is created: reads the numbers shown on the cards.
     protected override void OnInitialized()
     {
         vehicleCount = Reader.CountLatestVehicles();
-        minutes = Reader.MinutesSinceLastSuccessfulPoll();
+        alertCount = Reader.GetCurrentAlerts().Count;
     }
 }

@@ -4,22 +4,32 @@
 <PageTitle>Find a stop</PageTitle>
 <h1>Find a stop</h1>
 
-<label for="query">Stop name:</label>
-@* oninput updates the results on every keystroke instead of when the box loses focus *@
-<input id="query" @bind="query" @bind:event="oninput" />
+@* "form-label"/"form-control" are Bootstrap's styles for a labelled text box. *@
+<div class="mb-3">
+    <label for="query" class="form-label">Stop name:</label>
+    @* oninput updates the results on every keystroke instead of when the box loses focus *@
+    <input id="query" class="form-control" @bind="query" @bind:event="oninput" placeholder="e.g. Westmoreland" />
+</div>
 
 @if (results.Count == 0 && query.Trim() != "")
 {
-    <p>No stops found.</p>
+    <p role="status">No stops found.</p>
 }
-else
+else if (results.Count > 0)
 {
-    <ul>
+    @* Tell the user when the list is cut short, instead of silently hiding results *@
+    <p role="status">
+        @(results.Count > 50 ? $"Showing the first 50 of {results.Count} stops. Type more to narrow it down." : $"{results.Count} stops found.")
+    </p>
+    @* "list-group" shows the results as a tidy boxed list; each link is a whole clickable row. *@
+    <div class="list-group">
         @foreach (Stop stop in results.Take(50))
         {
-            <li><a href="/stop/@stop.StopCode">@stop.StopName (@stop.StopCode)</a></li>
+            <a class="list-group-item list-group-item-action" href="/stop/@stop.StopCode">
+                @stop.StopName <span class="text-body-secondary">(@stop.StopCode)</span>
+            </a>
         }
-    </ul>
+    </div>
 }
 
 @code {
