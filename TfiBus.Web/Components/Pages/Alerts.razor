@@ -5,19 +5,29 @@
 <PageTitle>Service alerts</PageTitle>
 <h1>Service alerts</h1>
 
-<label for="filter">Filter by route, stop or text:</label>
-@* oninput filters on every keystroke *@
-<input id="filter" @bind="filter" @bind:event="oninput" />
+@* Bootstrap classes: "form-label"/"form-control" style the filter box; "card" draws each alert in a bordered box. *@
+<div class="mb-3">
+    <label for="filter" class="form-label">Filter by route, stop or text:</label>
+    @* oninput filters on every keystroke *@
+    <input id="filter" class="form-control" @bind="filter" @bind:event="oninput" placeholder="e.g. 39A or Terenure" />
+</div>
 
-<p>@shown.Count of @alertList.Count alerts</p>
+@* role="status" makes screen readers announce the new count as the filter changes. *@
+<p role="status">@shown.Count of @alertList.Count alerts</p>
 
 @foreach (AlertRecord alert in shown)
 {
-    <section>
-        <h2>@alert.Header</h2>
-        <p><small>Severity: @alert.Severity. Routes: @RouteNames(alert)</small></p>
-        <p>@alert.Description</p>
-        <p><small>@Period(alert)</small></p>
+    <section class="card mb-3">
+        <div class="card-body">
+            <h2 class="h5 card-title">
+                @* A coloured badge so the severity can be seen at a glance; the word is still there for screen readers. *@
+                <span class="badge @SeverityClass(alert.Severity) me-2">@SeverityLabel(alert.Severity)</span>
+                @alert.Header
+            </h2>
+            <p class="card-text"><strong>Routes:</strong> @RouteNames(alert)</p>
+            <p class="card-text">@alert.Description</p>
+            <p class="card-text"><small class="text-body-secondary">@Period(alert)</small></p>
+        </div>
     </section>
 }
 
@@ -46,45 +56,19 @@
             || a.StopIds.Contains(text, StringComparison.OrdinalIgnoreCase);
     }
 
-    // Irish local time, so times match what people see on the bus stop and their phone.
-    // If the server has no time zone data (some small Docker images), fall back to UTC instead of crashing.
-    private static readonly TimeZoneInfo DisplayZone = FindDublinZone();
-
-    private static TimeZoneInfo FindDublinZone()
-    {
-        try
-        {
-            return TimeZoneInfo.FindSystemTimeZoneById("Europe/Dublin");
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            return TimeZoneInfo.Utc;
-        }
-    }
-
-    // Turns a Unix timestamp (seconds since 1970, in UTC) into readable local time.
-    private static string LocalTime(long unixSeconds)
-    {
-        DateTimeOffset utc = DateTimeOffset.FromUnixTimeSeconds(unixSeconds);
-        DateTimeOffset local = TimeZoneInfo.ConvertTime(utc, DisplayZone);
-        // Label the time as UTC only when the fallback was used, so the reader is never misled.
-        string suffix = DisplayZone == TimeZoneInfo.Utc ? " UTC" : "";
-        return local.ToString("d MMM yyyy HH:mm") + suffix;
-    }
-
     // The validity period as text. The feed uses a far-future date to mean "no end".
     private static string Period(AlertRecord a)
     {
         if (a.ActiveFrom == null && a.ActiveTo == null) { return ""; }
-        string from = a.ActiveFrom == null ? "" : "From " + LocalTime(a.ActiveFrom.Value) + ". ";
+        string from = a.ActiveFrom == null ? "" : "From " + IrishTime.FormatUnix(a.ActiveFrom.Value, "d MMM yyyy HH:mm") + ". ";
         string until = (a.ActiveTo == null || a.ActiveTo.Value > 4102444800)
             ? "Until further notice."
-            : "Until " + LocalTime(a.ActiveTo.Value) + ".";
+            : "Until " + IrishTime.FormatUnix(a.ActiveTo.Value, "d MMM yyyy HH:mm") + ".";
         return from + until;
     }
 
     // The alert's route IDs (stored comma-separated) turned into the short names people know,
-    // such as "39A". An ID missing from routes.txt is shown as it is, so nothing is hidden.
+    // such as "39A". An ID missing from routes.txt is shown as it is, so nothing is hidden
     private string RouteNames(AlertRecord a)
     {
         if (a.RouteIds == "") { return "none listed"; }
@@ -103,4 +87,17 @@
         }
         return string.Join(", ", names);
     }
+
+    // Bootstrap colour class for each severity the feed uses (GTFS-Realtime SeverityLevel names)
+    // A switch expression picks the first matching case; "_" means "anything else".
+    private static string SeverityClass(string severity) => severity switch
+    {
+        "Severe" => "text-bg-danger",
+        "Warning" => "text-bg-warning",
+        "Info" => "text-bg-info",
+        _ => "text-bg-secondary"
+    };
+
+    // The feed's "UnknownSeverity" is not a friendly word to show, so it becomes "Notice"
+    private static string SeverityLabel(string severity) => severity == "UnknownSeverity" || severity == "" ? "Notice" : severity;
 }
